@@ -1,20 +1,31 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import HomeScreen from './app/screens/HomeScreen';
+import TakeOrderScreen from './app/screens/TakeOrderScreen';
+import OrdersScreen from './app/screens/OrdersScreen';
+import HistoryScreen from './app/screens/HistoryScreen';
+import MenuScreen from './app/screens/MenuScreen';
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer theme={DarkTheme}>
+      <Stack.Navigator
+        initialRouteName="Inicio"
+        screenOptions={{
+          headerStyle: { backgroundColor: '#1f2937' },
+          headerTintColor: 'white',
+        }}
+      >
+        <Stack.Screen name="Inicio" component={HomeScreen} />
+        <Stack.Screen name="TomarPedido" component={TakeOrderScreen} />
+        <Stack.Screen name="Pedidos" component={OrdersScreen} />
+        <Stack.Screen name="Historial" component={HistoryScreen} />
+        <Stack.Screen name="Menu" component={MenuScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
