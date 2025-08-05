@@ -20,10 +20,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { mockMenu, Product } from '../data/mockMenu';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors } from '../../styles/colors';
+
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+};
 
 type SelectedProduct = {
   product: Product;
@@ -32,6 +37,7 @@ type SelectedProduct = {
 };
 
 export default function TakeOrderScreen() {
+  const [menu, setMenu] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [currentNoteProductId, setCurrentNoteProductId] = useState<string | null>(null);
@@ -40,23 +46,58 @@ export default function TakeOrderScreen() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
 
-  const panelHeight = useRef(new Animated.Value(60)).current;
+  const panelHeight = React.useRef(new Animated.Value(60)).current;
   const insets = useSafeAreaInsets();
 
   const noteInputRef = useRef<TextInput>(null);
 
-  const filteredMenu = mockMenu.filter((product) =>
+  // Cargar menú guardado
+  useEffect(() => {
+    const loadMenu = async () => {
+      try {
+        const json = await AsyncStorage.getItem('menu');
+        if (json) {
+          setMenu(JSON.parse(json));
+        }
+      } catch (e) {
+        console.error('Error cargando menú:', e);
+      }
+    };
+    loadMenu();
+  }, []);
+
+  // Cargar pedido guardado
+  useEffect(() => {
+    const loadSelectedProducts = async () => {
+      try {
+        const json = await AsyncStorage.getItem('selectedProducts');
+        if (json) {
+          setSelectedProducts(JSON.parse(json));
+        }
+      } catch (e) {
+        console.error('Error cargando pedido:', e);
+      }
+    };
+    loadSelectedProducts();
+  }, []);
+
+  // Guardar pedido cada vez que cambie
+  useEffect(() => {
+    const saveSelectedProducts = async () => {
+      try {
+        await AsyncStorage.setItem('selectedProducts', JSON.stringify(selectedProducts));
+      } catch (e) {
+        console.error('Error guardando pedido:', e);
+      }
+    };
+    saveSelectedProducts();
+  }, [selectedProducts]);
+
+  const filteredMenu = menu.filter((product) =>
     product.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  useEffect(() => {
-    const showSub = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
+  // Resto del código para añadir, eliminar productos, notas, etc.
 
   const addProduct = (product: Product) => {
     setSelectedProducts((current) => {
@@ -157,22 +198,20 @@ export default function TakeOrderScreen() {
           text: 'Confirmar',
           onPress: async () => {
             try {
-              const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+              const today = new Date().toISOString().slice(0, 10);
 
               const existingData = await AsyncStorage.getItem('pedidos');
               const existingOrders = existingData ? JSON.parse(existingData) : [];
 
-              // Filtrar pedidos del día de hoy
               const pedidosHoy = existingOrders.filter(
                 (p: any) => p.createdAt.slice(0, 10) === today
               );
 
-              // Número correlativo para el pedido
               const newOrderNumber = pedidosHoy.length + 1;
 
               const newOrder = {
-                id: uuidv4(),                // ID único
-                orderNumber: newOrderNumber, // para mostrar en UI (puede repetirse)
+                id: uuidv4(),
+                orderNumber: newOrderNumber,
                 items: selectedProducts,
                 total: formatTotal,
                 createdAt: new Date().toISOString(),
