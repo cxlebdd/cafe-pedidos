@@ -23,6 +23,8 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { mockMenu, Product } from '../data/mockMenu';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { colors } from '../../styles/colors';
+
 type SelectedProduct = {
   product: Product;
   quantity: number;
@@ -141,60 +143,59 @@ export default function TakeOrderScreen() {
   }, [panelOpen, insets.bottom]);
 
   const submitOrder = () => {
-  if (selectedProducts.length === 0) {
-    Alert.alert('Pedido vacío', 'Por favor, agrega al menos un producto');
-    return;
-  }
+    if (selectedProducts.length === 0) {
+      Alert.alert('Pedido vacío', 'Por favor, agrega al menos un producto');
+      return;
+    }
 
-  Alert.alert(
-    'Confirmar envío',
-    `¿Confirmas enviar el pedido por ${formatTotal}?`,
-    [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Confirmar',
-        onPress: async () => {
-          try {
-            const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+    Alert.alert(
+      'Confirmar envío',
+      `¿Confirmas enviar el pedido por ${formatTotal}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Confirmar',
+          onPress: async () => {
+            try {
+              const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
 
-            const existingData = await AsyncStorage.getItem('pedidos');
-            const existingOrders = existingData ? JSON.parse(existingData) : [];
+              const existingData = await AsyncStorage.getItem('pedidos');
+              const existingOrders = existingData ? JSON.parse(existingData) : [];
 
-            // Filtrar pedidos del día de hoy
-            const pedidosHoy = existingOrders.filter(
-              (p: any) => p.createdAt.slice(0, 10) === today
-            );
+              // Filtrar pedidos del día de hoy
+              const pedidosHoy = existingOrders.filter(
+                (p: any) => p.createdAt.slice(0, 10) === today
+              );
 
-            // Número correlativo para el pedido
-            const newOrderNumber = pedidosHoy.length + 1;
+              // Número correlativo para el pedido
+              const newOrderNumber = pedidosHoy.length + 1;
 
-            const newOrder = {
-              id: uuidv4(),                // <-- ID único, ya no el correlativo diario
-              orderNumber: pedidosHoy.length + 1, // para mostrar en UI (puede repetirse)
-              items: selectedProducts,
-              total: formatTotal,
-              createdAt: new Date().toISOString(),
-            };
+              const newOrder = {
+                id: uuidv4(),                // ID único
+                orderNumber: newOrderNumber, // para mostrar en UI (puede repetirse)
+                items: selectedProducts,
+                total: formatTotal,
+                createdAt: new Date().toISOString(),
+              };
 
-            const updatedOrders = [...existingOrders, newOrder];
+              const updatedOrders = [...existingOrders, newOrder];
 
-            await AsyncStorage.setItem('pedidos', JSON.stringify(updatedOrders));
+              await AsyncStorage.setItem('pedidos', JSON.stringify(updatedOrders));
 
-            Alert.alert('Pedido enviado', `Has enviado un pedido por ${formatTotal}`);
+              Alert.alert('Pedido enviado', `Has enviado un pedido por ${formatTotal}`);
 
-            setSelectedProducts([]);
-            setPanelOpen(false);
-          } catch (err) {
-            Alert.alert('Error', 'Hubo un problema al guardar el pedido');
-            console.error(err);
-          }
+              setSelectedProducts([]);
+              setPanelOpen(false);
+            } catch (err) {
+              Alert.alert('Error', 'Hubo un problema al guardar el pedido');
+              console.error(err);
+            }
+          },
         },
-      },
-    ],
-    { cancelable: true }
-  );
-};
-
+      ],
+      { cancelable: true }
+    );
+  };
 
   const renderMenuItem = ({ item }: { item: Product }) => (
     <TouchableOpacity style={styles.menuItem} onPress={() => addProduct(item)}>
@@ -214,24 +215,26 @@ export default function TakeOrderScreen() {
           )}
         </View>
 
-        <Text style={styles.priceMuted}>${(item.product.price * item.quantity).toFixed(2)}</Text>
+        <Text style={styles.priceMuted}>
+          ${(item.product.price * item.quantity).toFixed(2)}
+        </Text>
       </View>
 
       <View style={styles.selectedItemButtonsRow}>
         <TouchableOpacity onPress={() => removeProduct(item.product.id)} style={styles.iconBtn}>
-          <MaterialCommunityIcons name="minus-circle-outline" size={26} color="#ec5858" />
+          <MaterialCommunityIcons name="minus-circle-outline" size={26} color={colors.buttonRemove} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => addProduct(item.product)} style={styles.iconBtn}>
-          <MaterialCommunityIcons name="plus-circle-outline" size={26} color="#27ae60" />
+          <MaterialCommunityIcons name="plus-circle-outline" size={26} color={colors.buttonAdd} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => openNoteModal(item.product.id)} style={styles.iconBtn}>
-          <MaterialCommunityIcons name="pencil-outline" size={26} color="#f1c40f" />
+          <MaterialCommunityIcons name="pencil-outline" size={26} color={colors.buttonNote} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => deleteProduct(item.product.id)} style={styles.iconBtn}>
-          <MaterialCommunityIcons name="trash-can-outline" size={26} color="#d63031" />
+          <MaterialCommunityIcons name="trash-can-outline" size={26} color={colors.buttonDelete} />
         </TouchableOpacity>
       </View>
     </View>
@@ -242,7 +245,7 @@ export default function TakeOrderScreen() {
       <TextInput
         style={styles.searchInput}
         placeholder="Buscar producto..."
-        placeholderTextColor="#888"
+        placeholderTextColor={colors.placeholderText}
         value={searchText}
         onChangeText={setSearchText}
       />
@@ -342,6 +345,7 @@ export default function TakeOrderScreen() {
               returnKeyType="done"
               blurOnSubmit={true}
               onSubmitEditing={() => noteInputRef.current?.blur()}
+              placeholderTextColor={colors.placeholderText}
             />
             <TouchableOpacity style={styles.modalSaveBtn} onPress={saveNote}>
               <Text style={styles.modalSaveText}>Guardar Nota</Text>
@@ -362,13 +366,13 @@ export default function TakeOrderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
     paddingHorizontal: 16,
     paddingTop: 16,
   },
   searchInput: {
-    backgroundColor: '#222',
-    color: '#ecf0f1',
+    backgroundColor: colors.inputBackground,
+    color: colors.inputText,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -376,7 +380,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyOrderText: {
-    color: '#777',
+    color: colors.textMuted,
     fontStyle: 'italic',
     textAlign: 'center',
   },
@@ -387,15 +391,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 16,
-    borderBottomColor: '#222',
+    borderBottomColor: colors.borderColor,
     borderBottomWidth: 1,
   },
   menuItemName: {
-    color: '#ecf0f1',
+    color: colors.textPrimary,
     fontSize: 18,
   },
   menuItemPrice: {
-    color: '#ecf0f1',
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -404,13 +408,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 16,
     right: 16,
-    backgroundColor: '#111',
+    backgroundColor: colors.orderPanelBackground,
     borderRadius: 16,
     padding: 12,
-    borderColor: '#222',
+    borderColor: colors.orderPanelBorder,
     borderWidth: 1,
     overflow: 'hidden',
-    paddingHorizontal: 18, // extra horizontal padding
+    paddingHorizontal: 18,
   },
   orderPanelHeader: {
     flexDirection: 'row',
@@ -418,17 +422,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   orderPanelTitle: {
-    color: '#ecf0f1',
+    color: colors.textPrimary,
     fontWeight: '700',
     fontSize: 20,
   },
   orderPanelTotal: {
-    color: '#27ae60',
+    color: colors.priceGreen,
     fontWeight: '700',
     fontSize: 20,
   },
   orderPanelIcon: {
-    color: '#ecf0f1',
+    color: colors.textPrimary,
     fontWeight: '700',
     fontSize: 22,
   },
@@ -440,9 +444,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     marginBottom: 8,
-    borderBottomColor: '#333',
+    borderBottomColor: colors.borderColorDark,
     borderBottomWidth: 1,
-    backgroundColor: 'transparent', // sin fondo gris
+    backgroundColor: 'transparent',
   },
   selectedItemRow: {
     flexDirection: 'row',
@@ -450,24 +454,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   selectedItemName: {
-    color: '#ecf0f1',
+    color: colors.textPrimary,
     fontSize: 18,
     fontWeight: '700',
   },
   quantityText: {
-    color: '#888',
+    color: colors.textSecondary,
     fontSize: 14,
     marginTop: 2,
   },
   priceMuted: {
-    color: '#777',
+    color: colors.textMuted,
     fontWeight: '600',
     fontSize: 16,
     minWidth: 70,
     textAlign: 'right',
   },
   noteText: {
-    color: '#ccc',
+    color: colors.textNote,
     fontStyle: 'italic',
     marginTop: 4,
     fontSize: 14,
@@ -479,7 +483,7 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     paddingHorizontal: 6,
-    marginRight: 12, // separación entre botones en lugar de gap
+    marginRight: 12,
   },
   orderFooter: {
     marginTop: 12,
@@ -496,34 +500,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   clearAllBtn: {
-    backgroundColor: '#d63031',
+    backgroundColor: colors.buttonDelete,
   },
   submitBtn: {
-    backgroundColor: '#27ae60',
+    backgroundColor: colors.buttonAdd,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: colors.modalOverlay,
     justifyContent: 'center',
     paddingHorizontal: 20,
   },
   modalContent: {
-    backgroundColor: '#222',
+    backgroundColor: colors.modalBackground,
     borderRadius: 14,
     padding: 24,
     minWidth: '90%',
   },
   modalTitle: {
     fontSize: 20,
-    color: '#ecf0f1',
+    color: colors.textPrimary,
     fontWeight: '700',
     marginBottom: 12,
     textAlign: 'center',
   },
   modalInput: {
     height: 100,
-    backgroundColor: '#111',
-    color: '#ecf0f1',
+    backgroundColor: colors.modalInputBackground,
+    color: colors.inputText,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -532,26 +536,26 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   modalSaveBtn: {
-    backgroundColor: '#27ae60',
+    backgroundColor: colors.modalSaveButton,
     paddingVertical: 12,
     borderRadius: 10,
     marginBottom: 10,
   },
   modalSaveText: {
-    color: '#ecf0f1',
+    color: colors.inputText,
     fontWeight: '700',
     textAlign: 'center',
     fontSize: 16,
   },
   modalCancelBtn: {
     backgroundColor: 'transparent',
-    borderColor: '#d63031',
-    borderWidth: 2,  // Número, no string
+    borderColor: colors.modalCancelText,
+    borderWidth: 2,
     paddingVertical: 12,
     borderRadius: 10,
   },
   modalCancelText: {
-    color: '#d63031',
+    color: colors.modalCancelText,
     fontWeight: '700',
     textAlign: 'center',
     fontSize: 16,

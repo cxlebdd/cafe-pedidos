@@ -4,9 +4,12 @@ import {
   Text,
   FlatList,
   StyleSheet,
+  Alert,
+  Pressable,
 } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { colors } from '../../styles/colors';
 
 type Product = {
   id: string;
@@ -26,7 +29,7 @@ type Order = {
   items: SelectedProduct[];
   total: string;
   createdAt: string;
-  finishedAt?: string; // opcional, si quieres mostrar cuándo se finalizó
+  finishedAt?: string;
 };
 
 export default function HistorialScreen() {
@@ -35,9 +38,7 @@ export default function HistorialScreen() {
   const loadHistorial = async () => {
     try {
       const data = await AsyncStorage.getItem('pedidosHistorial');
-      if (data) {
-        setHistorial(JSON.parse(data));
-      }
+      if (data) setHistorial(JSON.parse(data));
     } catch (err) {
       console.error('Error al cargar historial:', err);
     }
@@ -47,8 +48,63 @@ export default function HistorialScreen() {
     loadHistorial();
   }, []);
 
+  const eliminarPedido = (id: string) => {
+    console.log('Long press detected en pedido con id:', id);
+    Alert.alert(
+      'Eliminar pedido',
+      '¿Seguro que quieres eliminar este pedido permanentemente?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const nuevoHistorial = historial.filter((o) => o.id !== id);
+              setHistorial(nuevoHistorial);
+              await AsyncStorage.setItem('pedidosHistorial', JSON.stringify(nuevoHistorial));
+              console.log('Pedido eliminado:', id);
+            } catch (error) {
+              console.error('Error al eliminar pedido:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const borrarTodo = () => {
+    Alert.alert(
+      'Borrar todo el historial',
+      '¿Seguro que quieres borrar todo el historial de pedidos?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Borrar todo',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem('pedidosHistorial');
+              setHistorial([]);
+              console.log('Historial completo borrado');
+            } catch (error) {
+              console.error('Error al borrar historial:', error);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderOrder = ({ item }: { item: Order }) => (
-    <View style={styles.orderCard}>
+    <Pressable
+      onLongPress={() => eliminarPedido(item.id)}
+      delayLongPress={700}
+      style={({ pressed }) => [
+        styles.orderCard,
+        pressed && { opacity: 0.7 },
+      ]}
+    >
       <View style={styles.orderHeader}>
         <Text style={styles.orderTitle}>Pedido #{item.orderNumber}</Text>
         <Text style={styles.orderTime}>
@@ -81,7 +137,7 @@ export default function HistorialScreen() {
           </View>
         ))}
       </View>
-    </View>
+    </Pressable>
   );
 
   return (
@@ -89,12 +145,17 @@ export default function HistorialScreen() {
       {historial.length === 0 ? (
         <Text style={styles.emptyText}>No hay pedidos finalizados.</Text>
       ) : (
-        <FlatList
-          data={historial}
-          renderItem={renderOrder}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 80 }}
-        />
+        <>
+          <FlatList
+            data={historial}
+            renderItem={renderOrder}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingBottom: 80 }}
+          />
+          <Pressable style={styles.clearAllBtn} onPress={borrarTodo}>
+            <Text style={styles.clearAllText}>Borrar todo el historial</Text>
+          </Pressable>
+        </>
       )}
     </View>
   );
@@ -103,22 +164,22 @@ export default function HistorialScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.background,
     padding: 16,
   },
   emptyText: {
-    color: '#777',
+    color: colors.textMuted,
     fontSize: 16,
     textAlign: 'center',
     marginTop: 40,
   },
   orderCard: {
-    backgroundColor: '#111',
+    backgroundColor: colors.surfaceDark,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#222',
+    borderColor: colors.surface,
   },
   orderHeader: {
     flexDirection: 'row',
@@ -126,22 +187,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   orderTitle: {
-    color: '#ecf0f1',
+    color: colors.textLight,
     fontWeight: '700',
     fontSize: 16,
   },
   orderTime: {
-    color: '#888',
+    color: colors.textMuted,
     fontSize: 14,
   },
   orderTotal: {
-    color: '#27ae60',
+    color: colors.primary,
     fontWeight: '600',
     marginBottom: 8,
   },
   itemsList: {
     borderTopWidth: 1,
-    borderTopColor: '#222',
+    borderTopColor: colors.surface,
     paddingTop: 8,
     marginTop: 8,
   },
@@ -151,16 +212,30 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   itemName: {
-    color: '#ecf0f1',
+    color: colors.textLight,
     fontSize: 15,
   },
   itemPrice: {
-    color: '#ccc',
+    color: colors.textMedium,
     fontSize: 15,
   },
   noteText: {
-    color: '#aaa',
+    color: colors.textMuted,
     fontStyle: 'italic',
     fontSize: 13,
+  },
+  clearAllBtn: {
+    backgroundColor: colors.danger,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginBottom: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  clearAllText: {
+    color: colors.textLight,
+    fontWeight: '700',
+    fontSize: 16,
   },
 });
