@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { mockMenu, Product } from '../data/mockMenu';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type SelectedProduct = {
   product: Product;
@@ -138,31 +139,60 @@ export default function TakeOrderScreen() {
   }, [panelOpen, insets.bottom]);
 
   const submitOrder = () => {
-    if (selectedProducts.length === 0) {
-      Alert.alert('Pedido vacío', 'Por favor, agrega al menos un producto');
-      return;
-    }
+  if (selectedProducts.length === 0) {
+    Alert.alert('Pedido vacío', 'Por favor, agrega al menos un producto');
+    return;
+  }
 
-    Alert.alert(
-      'Confirmar envío',
-      `¿Confirmas enviar el pedido por ${formatTotal}?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Confirmar',
-          onPress: () => {
-            Alert.alert(
-              'Pedido enviado',
-              `Has enviado un pedido por ${formatTotal} con ${selectedProducts.length} productos diferentes`
+  Alert.alert(
+    'Confirmar envío',
+    `¿Confirmas enviar el pedido por ${formatTotal}?`,
+    [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Confirmar',
+        onPress: async () => {
+          try {
+            const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+
+            const existingData = await AsyncStorage.getItem('pedidos');
+            const existingOrders = existingData ? JSON.parse(existingData) : [];
+
+            // Filtrar pedidos del día de hoy
+            const pedidosHoy = existingOrders.filter(
+              (p: any) => p.createdAt.slice(0, 10) === today
             );
+
+            // Número correlativo para el pedido
+            const newOrderNumber = pedidosHoy.length + 1;
+
+            const newOrder = {
+              id: `${today}-${newOrderNumber}`, // id único y ordenado
+              orderNumber: newOrderNumber,
+              items: selectedProducts,
+              total: formatTotal,
+              createdAt: new Date().toISOString(),
+            };
+
+            const updatedOrders = [...existingOrders, newOrder];
+
+            await AsyncStorage.setItem('pedidos', JSON.stringify(updatedOrders));
+
+            Alert.alert('Pedido enviado', `Has enviado un pedido por ${formatTotal}`);
+
             setSelectedProducts([]);
             setPanelOpen(false);
-          },
+          } catch (err) {
+            Alert.alert('Error', 'Hubo un problema al guardar el pedido');
+            console.error(err);
+          }
         },
-      ],
-      { cancelable: true }
-    );
-  };
+      },
+    ],
+    { cancelable: true }
+  );
+};
+
 
   const renderMenuItem = ({ item }: { item: Product }) => (
     <TouchableOpacity style={styles.menuItem} onPress={() => addProduct(item)}>
