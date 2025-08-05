@@ -1,3 +1,5 @@
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -167,8 +169,8 @@ export default function TakeOrderScreen() {
             const newOrderNumber = pedidosHoy.length + 1;
 
             const newOrder = {
-              id: `${today}-${newOrderNumber}`, // id único y ordenado
-              orderNumber: newOrderNumber,
+              id: uuidv4(),                // <-- ID único, ya no el correlativo diario
+              orderNumber: pedidosHoy.length + 1, // para mostrar en UI (puede repetirse)
               items: selectedProducts,
               total: formatTotal,
               createdAt: new Date().toISOString(),

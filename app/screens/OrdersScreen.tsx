@@ -46,23 +46,43 @@ export default function ViewOrdersScreen() {
   };
 
   const deleteOrder = (id: string) => {
-    Alert.alert(
-      'Marcar como listo',
-      '¿Deseas marcar este pedido como listo? Ya no aparecerá en esta lista.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Marcar como listo',
-          onPress: async () => {
+  Alert.alert(
+    'Marcar como listo',
+    '¿Deseas marcar este pedido como listo? Ya no aparecerá en esta lista.',
+    [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Marcar como listo',
+        onPress: async () => {
+          try {
+            // Filtrar pedido seleccionado
+            const pedidoParaHistorial = orders.find((o) => o.id === id);
+            if (!pedidoParaHistorial) return;
+
+            // Quitar pedido de pedidos activos
             const updated = orders.filter((o) => o.id !== id);
             setOrders(updated);
             await AsyncStorage.setItem('pedidos', JSON.stringify(updated));
-          },
-          style: 'destructive',
+
+            // Cargar historial actual
+            const historialData = await AsyncStorage.getItem('pedidosHistorial');
+            const historial: Order[] = historialData ? JSON.parse(historialData) : [];
+
+            // Agregar pedido al historial
+            await AsyncStorage.setItem(
+              'pedidosHistorial',
+              JSON.stringify([pedidoParaHistorial, ...historial])
+            );
+          } catch (error) {
+            console.error('Error al mover pedido al historial:', error);
+          }
         },
-      ]
-    );
-  };
+        style: 'destructive',
+      },
+    ]
+  );
+};
+
 
   useEffect(() => {
   const fetchData = async () => {

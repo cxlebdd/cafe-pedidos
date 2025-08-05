@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
@@ -14,8 +14,6 @@ type RootStackParamList = {
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
-const { width } = Dimensions.get('window');
-
 type ButtonItem = {
   title: string;
   icon: string;
@@ -26,7 +24,7 @@ type ButtonItem = {
     iconColor: string;
     textColor: string;
   };
-  fullWidth?: boolean; // para botones grandes
+  fullWidth?: boolean;
 };
 
 export default function HomeScreen() {
@@ -38,10 +36,10 @@ export default function HomeScreen() {
       icon: 'coffee-to-go',
       screen: 'TomarPedido',
       colors: {
-        background: '#2ed573',
-        iconBackground: '#27b760',
+        background: '#111',
+        iconBackground: '#2ed573',
         iconColor: '#fff',
-        textColor: '#fff',
+        textColor: '#ecf0f1',
       },
       fullWidth: true,
     },
@@ -50,10 +48,10 @@ export default function HomeScreen() {
       icon: 'silverware-fork-knife',
       screen: 'Menu',
       colors: {
-        background: '#6c7a89',
-        iconBackground: '#4f5b66',
-        iconColor: '#fff',
-        textColor: '#fff',
+        background: '#111111',
+        iconBackground: '#555555',
+        iconColor: '#ccc',
+        textColor: '#eee',
       },
       fullWidth: true,
     },
@@ -62,10 +60,10 @@ export default function HomeScreen() {
       icon: 'format-list-bulleted',
       screen: 'Pedidos',
       colors: {
-        background: '#4a90e2',
-        iconBackground: '#357ABD',
+        background: '#111111',
+        iconBackground: '#3b5998',
         iconColor: '#fff',
-        textColor: '#fff',
+        textColor: '#eee',
       },
       fullWidth: false,
     },
@@ -74,10 +72,10 @@ export default function HomeScreen() {
       icon: 'history',
       screen: 'Historial',
       colors: {
-        background: '#f5a623',
+        background: '#111111',
         iconBackground: '#d48806',
         iconColor: '#fff',
-        textColor: '#fff',
+        textColor: '#eee',
       },
       fullWidth: false,
     },
@@ -123,14 +121,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1e272e',
+    backgroundColor: '#000',
     paddingTop: 50,
     paddingHorizontal: 20,
   },
   title: {
     fontSize: 34,
     fontWeight: '900',
-    color: '#ee5253',
+    color: '#ee5253', // rojo elegante igual que tus otros textos
     textAlign: 'center',
     marginBottom: 36,
     letterSpacing: 4,
@@ -155,7 +153,6 @@ const styles = StyleSheet.create({
     width: '48%',
   },
   iconContainer: {
-    backgroundColor: '#E3E9F3',
     borderRadius: 40,
     padding: 14,
     marginBottom: 12,
