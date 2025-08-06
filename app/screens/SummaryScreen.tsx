@@ -4,8 +4,10 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  ScrollView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type Product = {
   id: string;
@@ -112,26 +114,41 @@ export default function SummaryScreen() {
   )[0];
 
   const Card = ({
-        title,
-        value,
-        valueColor = '#ecf0f1',
-        }: {
-        title: string;
-        value: string;
-        valueColor?: string;
-        }) => (
-        <View style={styles.card}>
-            <Text style={styles.cardTitle}>{title}</Text>
-            <Text style={[styles.cardValue, { color: valueColor }]}>{value}</Text>
-        </View>
-    );
-
+    icon,
+    title,
+    value,
+    valueColor = '#ecf0f1',
+  }: {
+    icon?: string;
+    title: string;
+    value: string | React.ReactNode;
+    valueColor?: string;
+  }) => (
+    <View style={styles.card}>
+      <View style={styles.cardTop}>
+        {icon && (
+          <MaterialCommunityIcons
+            name={icon}
+            size={20}
+            color="#aaa"
+            style={{ marginRight: 8 }}
+          />
+        )}
+        <Text style={styles.cardTitle}>{title}:</Text>
+      </View>
+      <Text style={[styles.cardValue, { color: valueColor }]}>{value}</Text>
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Resumen de ventas</Text>
 
-      <View style={styles.grid}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterScroll}
+      >
         {FILTERS.map((f, idx) => (
           <TouchableOpacity
             key={idx}
@@ -141,45 +158,63 @@ export default function SummaryScreen() {
               activeFilter === idx && styles.activeFilter,
             ]}
           >
-            <Text style={styles.filterText}>{f.label}</Text>
+            <Text
+              style={[
+                styles.filterText,
+                activeFilter === idx && { color: '#000' },
+              ]}
+            >
+              {f.label}
+            </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       <View style={{ marginTop: 24 }}>
         <Card
+          icon="clipboard-list"
           title="Total de pedidos"
           value={`${filteredOrders.length}`}
         />
 
         {mostSold && (
           <Card
+            icon="star"
             title="Producto más vendido"
             value={`${mostSold.name} × ${mostSold.total}`}
+            valueColor="#ffd32a"
           />
         )}
-        
+
         {mostExpensiveOrder?.orderNumber && (
-            <View style={styles.card}>
-                <Text style={styles.cardTitle}>Pedido más caro</Text>
-                <Text style={styles.cardValue}>
-                #{mostExpensiveOrder.orderNumber} –{' '}
+          <Card
+            icon="cash-multiple"
+            title="Pedido más caro"
+            value={
+              <>
+                <Text style={{ color: '#ecf0f1' }}>
+                  #{mostExpensiveOrder.orderNumber} –{' '}
+                </Text>
                 <Text style={{ color: '#2ed573' }}>
-                    ${parseMoney(mostExpensiveOrder.total).toFixed(2)}
+                  ${parseMoney(mostExpensiveOrder.total).toFixed(2)}
                 </Text>
-                </Text>
-            </View>
+              </>
+            }
+          />
         )}
+
         <Card
-            title="Total vendido"
-            value={`$${totalRevenue.toFixed(2)}`}
-            valueColor="#2ed573" // tu verde
+          icon="currency-usd"
+          title="Total vendido"
+          value={`$${totalRevenue.toFixed(2)}`}
+          valueColor="#2ed573"
         />
+
         {filteredOrders.length === 0 && (
           <Text style={styles.empty}>No hay pedidos en este periodo.</Text>
-        )}     
+        )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -187,7 +222,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  content: {
     padding: 20,
+    paddingBottom: 40,
   },
   title: {
     fontSize: 24,
@@ -197,18 +235,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     letterSpacing: 1.5,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'space-between',
+  filterScroll: {
+    gap: 12,
+    paddingBottom: 6,
   },
   filterBtn: {
-    width: '48%',
     backgroundColor: '#111',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+    marginRight: 6,
   },
   activeFilter: {
     backgroundColor: '#2ed573',
@@ -216,25 +252,31 @@ const styles = StyleSheet.create({
   filterText: {
     color: '#eee',
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 15,
   },
   card: {
     backgroundColor: '#111',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 14,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#222',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   cardTitle: {
     color: '#aaa',
     fontSize: 14,
-    marginBottom: 4,
+    fontWeight: '500',
   },
   cardValue: {
-    color: '#ecf0f1',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
   },
   empty: {
     color: '#777',

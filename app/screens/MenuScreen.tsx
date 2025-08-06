@@ -11,10 +11,13 @@ import {
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
+  Modal,
+  Animated,
 } from 'react-native';
-
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { colors } from '../../styles/colors';
 
 type Product = {
@@ -28,36 +31,49 @@ export default function ManageMenuScreen() {
   const [nameInput, setNameInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
-
-  const formatProductName = (text: string) => {
-    const cleaned = text.toLowerCase().replace(/\s+/g, ' ').trim();
-    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-  };
+  const [showModal, setShowModal] = useState(false);
+  const modalY = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
     const loadMenu = async () => {
-      try {
-        const json = await AsyncStorage.getItem('menu');
-        if (json) {
-          setMenu(JSON.parse(json));
-        }
-      } catch (e) {
-        console.error('Error cargando menú:', e);
-      }
+      const json = await AsyncStorage.getItem('menu');
+      if (json) setMenu(JSON.parse(json));
     };
     loadMenu();
   }, []);
 
   useEffect(() => {
-    const saveMenu = async () => {
-      try {
-        await AsyncStorage.setItem('menu', JSON.stringify(menu));
-      } catch (e) {
-        console.error('Error guardando menú:', e);
-      }
-    };
-    saveMenu();
+    AsyncStorage.setItem('menu', JSON.stringify(menu));
   }, [menu]);
+
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener('keyboardDidShow', () => {
+      Animated.timing(modalY, {
+        toValue: -100,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    });
+    const keyboardWillHide = Keyboard.addListener('keyboardDidHide', () => {
+      Animated.timing(modalY, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
+
+  const openForm = () => {
+    setNameInput('');
+    setPriceInput('');
+    setEditingId(null);
+    setShowModal(true);
+  };
 
   const saveProduct = () => {
     if (nameInput.trim() === '' || priceInput.trim() === '') {
@@ -66,162 +82,145 @@ export default function ManageMenuScreen() {
     }
 
     const price = parseFloat(priceInput);
+
     if (isNaN(price) || price <= 0) {
       Alert.alert('Error', 'Ingresa un precio válido mayor a 0');
       return;
     }
 
-    const formattedName = formatProductName(nameInput);
+    const formattedName =
+      nameInput.toLowerCase().replace(/\s+/g, ' ').trim().replace(/^./, (c) => c.toUpperCase());
 
     if (editingId) {
-      setMenu((current) =>
-        current.map((p) =>
+      setMenu((m) =>
+        m.map((p) =>
           p.id === editingId ? { ...p, name: formattedName, price } : p
         )
       );
-      setEditingId(null);
     } else {
-      const newProduct: Product = {
-        id: Math.random().toString(36).substring(2, 9),
-        name: formattedName,
-        price,
-      };
-      setMenu((current) => [...current, newProduct]);
+      setMenu((m) => [
+        ...m,
+        { id: Math.random().toString(36).substring(2, 9), name: formattedName, price },
+      ]);
     }
 
-    setNameInput('');
-    setPriceInput('');
-    Keyboard.dismiss();
+    setShowModal(false);
   };
 
   const deleteAll = () => {
-    if (menu.length === 0) {
+    if (!menu.length) {
       Alert.alert('No hay productos', 'El menú ya está vacío.');
       return;
     }
-    Alert.alert(
-      'Eliminar todo',
-      '¿Estás seguro de que quieres borrar todo el menú?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar todo',
-          style: 'destructive',
-          onPress: () => setMenu([]),
-        },
-      ]
-    );
-  };
-
-  const deleteProduct = (id: string) => {
-    Alert.alert(
-      'Eliminar producto',
-      '¿Seguro que quieres eliminar este producto?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            setMenu((current) => current.filter((p) => p.id !== id));
-          },
-        },
-      ]
-    );
+    Alert.alert('Eliminar todo', '¿Estás seguro?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: () => setMenu([]) },
+    ]);
   };
 
   const startEditing = (product: Product) => {
     setNameInput(product.name);
     setPriceInput(product.price.toString());
     setEditingId(product.id);
+    setShowModal(true);
   };
 
-  const cancelEditing = () => {
-    setNameInput('');
-    setPriceInput('');
-    setEditingId(null);
-  };
+  const deleteProduct = (id: string) => setMenu((m) => m.filter((p) => p.id !== id));
 
   const renderItem = ({ item }: { item: Product }) => (
-    <View style={styles.itemContainer}>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.itemName}>{item.name}</Text>
-        <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
-      </View>
-      <TouchableOpacity onPress={() => startEditing(item)} style={styles.iconBtn}>
-        <MaterialCommunityIcons name="pencil-outline" size={26} color={colors.buttonNote} />
+    <Swipeable
+      renderRightActions={() => (
+        <View style={styles.swipeContainer}>
+          <TouchableOpacity onPress={() => deleteProduct(item.id)} style={styles.swipeDelete}>
+            <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.inputText} />
+          </TouchableOpacity>
+        </View>
+      )}
+    >
+      <TouchableOpacity style={styles.itemContainer} onPress={() => startEditing(item)}>
+        <View>
+          <Text style={styles.itemName}>{item.name}</Text>
+          <Text style={styles.itemPrice}>${item.price.toFixed(2)}</Text>
+        </View>
+        <MaterialCommunityIcons name="pencil-outline" size={20} color={colors.textMuted} />
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => deleteProduct(item.id)} style={styles.iconBtn}>
-        <MaterialCommunityIcons name="trash-can-outline" size={26} color={colors.buttonDelete} />
-      </TouchableOpacity>
-    </View>
+    </Swipeable>
   );
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.container}
-      >
-        <Text style={styles.title}>Gestionar Menú</Text>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.container}
+        >
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Gestionar Menú</Text>
+          </View>
 
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            placeholder="Nombre del producto"
-            placeholderTextColor={colors.placeholderText}
-            value={nameInput}
-            onChangeText={setNameInput}
-          />
-          <TextInput
-            style={[styles.input, { width: 100, marginLeft: 8 }]}
-            placeholder="Precio"
-            placeholderTextColor={colors.placeholderText}
-            value={priceInput}
-            onChangeText={setPriceInput}
-            keyboardType="numeric"
-          />
-        </View>
-
-        <View style={styles.buttonsRow}>
-          {editingId ? (
-            <>
-              <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={saveProduct}>
-                <MaterialCommunityIcons name="content-save-outline" size={20} color={colors.inputText} />
-                <Text style={styles.buttonText}> Guardar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={cancelEditing}>
-                <MaterialCommunityIcons name="close-circle-outline" size={20} color={colors.inputText} />
-                <Text style={styles.buttonText}> Cancelar</Text>
-              </TouchableOpacity>
-            </>
+          {menu.length === 0 ? (
+            <Text style={styles.emptyText}>No hay productos en el menú.</Text>
           ) : (
-            <>
-              <TouchableOpacity style={[styles.button, styles.deleteAllButton]} onPress={deleteAll}>
-                <MaterialCommunityIcons name="delete-sweep-outline" size={20} color={colors.inputText} />
-                <Text style={styles.buttonText}> Eliminar todo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.addButton]} onPress={saveProduct}>
-                <MaterialCommunityIcons name="plus" size={20} color={colors.inputText} />
-                <Text style={styles.buttonText}> Agregar</Text>
-              </TouchableOpacity>
-            </>
+            <FlatList
+              data={menu}
+              renderItem={renderItem}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={{ paddingBottom: 100 }}
+              style={{ marginTop: 16 }}
+            />
           )}
-        </View>
 
-        {menu.length === 0 ? (
-          <Text style={styles.emptyText}>No hay productos en el menú.</Text>
-        ) : (
-          <FlatList
-            data={menu}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: 80 }}
-            style={{ marginTop: 16 }}
-          />
-        )}
-      </KeyboardAvoidingView>
-    </TouchableWithoutFeedback>
+          <View style={styles.floatingButtons}>
+            <TouchableOpacity style={styles.actionBtnRed} onPress={deleteAll}>
+              <MaterialCommunityIcons name="trash-can" size={24} color={colors.inputText} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtn} onPress={openForm}>
+              <MaterialCommunityIcons name="plus" size={28} color={colors.inputText} />
+            </TouchableOpacity>
+          </View>
+
+          <Modal visible={showModal} transparent animationType="fade">
+            <TouchableWithoutFeedback onPress={() => setShowModal(false)}>
+              <View style={styles.modalOverlay}>
+                <TouchableWithoutFeedback>
+                  <Animated.View style={[styles.modalContent, { transform: [{ translateY: modalY }] }]}>
+                    <Text style={styles.modalTitle}>{editingId ? 'Editar producto' : 'Nuevo producto'}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Nombre"
+                      placeholderTextColor={colors.placeholderText}
+                      value={nameInput}
+                      onChangeText={setNameInput}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Precio"
+                      placeholderTextColor={colors.placeholderText}
+                      value={priceInput}
+                      onChangeText={(text) => {
+                        // Limitar a números y punto decimal solamente
+                        const cleaned = text.replace(/[^0-9.]/g, '');
+                        setPriceInput(cleaned);
+                      }}
+                      keyboardType="numeric"
+                    />
+
+                    <View style={styles.modalButtonsRow}>
+                      <TouchableOpacity style={styles.modalBtnRed} onPress={() => setShowModal(false)}>
+                        <MaterialCommunityIcons name="close" size={24} color="#fff" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.modalBtnGreen} onPress={saveProduct}>
+                        <MaterialCommunityIcons name="check" size={24} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  </Animated.View>
+                </TouchableWithoutFeedback>
+              </View>
+            </TouchableWithoutFeedback>
+          </Modal>
+        </KeyboardAvoidingView>
+      </TouchableWithoutFeedback>
+    </GestureHandlerRootView>
   );
 }
 
@@ -235,57 +234,25 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: 12,
   },
-  inputRow: {
+  headerRow: {
     flexDirection: 'row',
-  },
-  input: {
-    flex: 1,
-    backgroundColor: colors.inputBackground,
-    color: colors.inputText,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  buttonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    gap: 10,
-  },
-  button: {
-    flexDirection: 'row',
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
   },
-  addButton: {
-    backgroundColor: colors.buttonAdd,
-  },
-  saveButton: {
-    backgroundColor: colors.buttonAdd,
-  },
-  cancelButton: {
-    backgroundColor: colors.buttonDelete,
-  },
-  deleteAllButton: {
-    backgroundColor: colors.buttonDelete,
-  },
-  buttonText: {
-    color: colors.inputText,
-    fontWeight: '700',
-    fontSize: 16,
-    marginLeft: 6,
+  emptyText: {
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 40,
   },
   itemContainer: {
-    flexDirection: 'row',
     backgroundColor: colors.orderPanelBackground,
-    padding: 12,
+    padding: 14,
     borderRadius: 12,
     marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
   itemName: {
@@ -297,13 +264,81 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 16,
   },
-  iconBtn: {
-    marginLeft: 12,
+  floatingButtons: {
+    position: 'absolute',
+    right: 16,
+    bottom: 24,
+    flexDirection: 'row',
+    gap: 14,
   },
-  emptyText: {
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 40,
+  actionBtn: {
+    backgroundColor: colors.buttonAdd,
+    padding: 14,
+    borderRadius: 50,
+  },
+  actionBtnRed: {
+    backgroundColor: colors.buttonDelete,
+    padding: 14,
+    borderRadius: 50,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: '#000000aa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  modalContent: {
+    backgroundColor: colors.orderPanelBackground,
+    padding: 20,
+    borderRadius: 16,
+    width: '100%',
+  },
+  modalTitle: {
+    color: colors.textPrimary,
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  input: {
+    backgroundColor: colors.inputBackground,
+    color: colors.inputText,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  modalBtnRed: {
+    flex: 1,
+    backgroundColor: colors.buttonDelete,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalBtnGreen: {
+    flex: 1,
+    backgroundColor: colors.buttonAdd,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  swipeContainer: {
+    justifyContent: 'center',
+    marginVertical: 6,
+  },
+  swipeDelete: {
+    backgroundColor: colors.buttonDelete,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 54,
+    borderRadius: 12,
+    height: 54,
   },
 });
