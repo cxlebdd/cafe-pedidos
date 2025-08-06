@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
@@ -10,6 +16,8 @@ type RootStackParamList = {
   Pedidos: undefined;
   Historial: undefined;
   Menu: undefined;
+  Resumen: undefined;
+  SalesDashboard: undefined;
 };
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -32,7 +40,7 @@ export default function HomeScreen() {
 
   const buttons: ButtonItem[] = [
     {
-      title: 'Tomar Pedido',
+      title: 'Tomar Orden',
       icon: 'coffee-to-go',
       screen: 'TomarPedido',
       colors: {
@@ -41,31 +49,28 @@ export default function HomeScreen() {
         iconColor: '#fff',
         textColor: '#ecf0f1',
       },
-      fullWidth: true,
     },
     {
-      title: 'Gestionar Menú',
+      title: 'Menú',
       icon: 'silverware-fork-knife',
       screen: 'Menu',
       colors: {
         background: '#111111',
-        iconBackground: '#555555',
-        iconColor: '#ccc',
+        iconBackground: '#ee5253',
+        iconColor: '#fff',
         textColor: '#eee',
       },
-      fullWidth: true,
     },
     {
-      title: 'Ver Pedidos',
+      title: 'Órdenes Pendientes',
       icon: 'format-list-bulleted',
       screen: 'Pedidos',
       colors: {
         background: '#111111',
-        iconBackground: '#3b5998',
+        iconBackground: '#54a0ff',
         iconColor: '#fff',
         textColor: '#eee',
       },
-      fullWidth: false,
     },
     {
       title: 'Historial',
@@ -73,26 +78,36 @@ export default function HomeScreen() {
       screen: 'Historial',
       colors: {
         background: '#111111',
-        iconBackground: '#d48806',
+        iconBackground: '#ffd32a',
         iconColor: '#fff',
         textColor: '#eee',
       },
-      fullWidth: false,
+    },
+    {
+      title: 'Resumen',
+      icon: 'chart-bar',
+      screen: 'Resumen',
+      colors: {
+        background: '#111111',
+        iconBackground: '#00d2d3',
+        iconColor: '#fff',
+        textColor: '#eee',
+      },
     },
   ];
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <Text style={styles.title}>Café Cereza</Text>
       <View style={styles.grid}>
         {buttons.map((item) => (
           <TouchableOpacity
             key={item.title}
             activeOpacity={0.85}
-            onPress={() => navigation.navigate(item.screen as any)}
+            onPress={() => navigation.navigate(item.screen)}
             style={[
               styles.button,
-              item.fullWidth ? styles.fullWidthButton : styles.halfWidthButton,
+              styles.fullWidthButton,
               { backgroundColor: item.colors.background },
             ]}
           >
@@ -114,7 +129,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
         ))}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -128,29 +143,24 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 34,
     fontWeight: '900',
-    color: '#ee5253', // rojo elegante igual que tus otros textos
+    color: '#ee5253',
     textAlign: 'center',
     marginBottom: 36,
     letterSpacing: 4,
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    gap: 20,
   },
   button: {
     height: 130,
     borderRadius: 24,
-    marginBottom: 24,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
   },
   fullWidthButton: {
     width: '100%',
-  },
-  halfWidthButton: {
-    width: '48%',
   },
   iconContainer: {
     borderRadius: 40,

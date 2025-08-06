@@ -9,6 +9,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -27,7 +29,11 @@ export default function ManageMenuScreen() {
   const [priceInput, setPriceInput] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Cargar menú guardado al iniciar
+  const formatProductName = (text: string) => {
+    const cleaned = text.toLowerCase().replace(/\s+/g, ' ').trim();
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  };
+
   useEffect(() => {
     const loadMenu = async () => {
       try {
@@ -42,7 +48,6 @@ export default function ManageMenuScreen() {
     loadMenu();
   }, []);
 
-  // Guardar menú cada vez que cambie
   useEffect(() => {
     const saveMenu = async () => {
       try {
@@ -54,7 +59,6 @@ export default function ManageMenuScreen() {
     saveMenu();
   }, [menu]);
 
-  // Agregar o editar producto
   const saveProduct = () => {
     if (nameInput.trim() === '' || priceInput.trim() === '') {
       Alert.alert('Error', 'Por favor ingresa nombre y precio válidos');
@@ -67,19 +71,19 @@ export default function ManageMenuScreen() {
       return;
     }
 
+    const formattedName = formatProductName(nameInput);
+
     if (editingId) {
-      // Editar producto existente
       setMenu((current) =>
         current.map((p) =>
-          p.id === editingId ? { ...p, name: nameInput, price } : p
+          p.id === editingId ? { ...p, name: formattedName, price } : p
         )
       );
       setEditingId(null);
     } else {
-      // Agregar nuevo producto
       const newProduct: Product = {
         id: Math.random().toString(36).substring(2, 9),
-        name: nameInput,
+        name: formattedName,
         price,
       };
       setMenu((current) => [...current, newProduct]);
@@ -87,9 +91,28 @@ export default function ManageMenuScreen() {
 
     setNameInput('');
     setPriceInput('');
+    Keyboard.dismiss();
   };
 
-  // Eliminar producto
+  const deleteAll = () => {
+    if (menu.length === 0) {
+      Alert.alert('No hay productos', 'El menú ya está vacío.');
+      return;
+    }
+    Alert.alert(
+      'Eliminar todo',
+      '¿Estás seguro de que quieres borrar todo el menú?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar todo',
+          style: 'destructive',
+          onPress: () => setMenu([]),
+        },
+      ]
+    );
+  };
+
   const deleteProduct = (id: string) => {
     Alert.alert(
       'Eliminar producto',
@@ -107,14 +130,12 @@ export default function ManageMenuScreen() {
     );
   };
 
-  // Editar producto
   const startEditing = (product: Product) => {
     setNameInput(product.name);
     setPriceInput(product.price.toString());
     setEditingId(product.id);
   };
 
-  // Cancelar edición
   const cancelEditing = () => {
     setNameInput('');
     setPriceInput('');
@@ -137,59 +158,70 @@ export default function ManageMenuScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
-    >
-      <Text style={styles.title}>Gestionar asdasdsaMenú</Text>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.container}
+      >
+        <Text style={styles.title}>Gestionar Menú</Text>
 
-      <View style={styles.inputRow}>
-        <TextInput
-          style={styles.input}
-          placeholder="Nombre del producto"
-          placeholderTextColor={colors.placeholderText}
-          value={nameInput}
-          onChangeText={setNameInput}
-        />
-        <TextInput
-          style={[styles.input, { width: 100, marginLeft: 8 }]}
-          placeholder="Precio"
-          placeholderTextColor={colors.placeholderText}
-          value={priceInput}
-          onChangeText={setPriceInput}
-          keyboardType="numeric"
-        />
-      </View>
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.input}
+            placeholder="Nombre del producto"
+            placeholderTextColor={colors.placeholderText}
+            value={nameInput}
+            onChangeText={setNameInput}
+          />
+          <TextInput
+            style={[styles.input, { width: 100, marginLeft: 8 }]}
+            placeholder="Precio"
+            placeholderTextColor={colors.placeholderText}
+            value={priceInput}
+            onChangeText={setPriceInput}
+            keyboardType="numeric"
+          />
+        </View>
 
-      <View style={styles.buttonsRow}>
-        {editingId ? (
-          <>
-            <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={saveProduct}>
-              <Text style={styles.buttonText}>Guardar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={cancelEditing}>
-              <Text style={styles.buttonText}>Cancelar</Text>
-            </TouchableOpacity>
-          </>
+        <View style={styles.buttonsRow}>
+          {editingId ? (
+            <>
+              <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={saveProduct}>
+                <MaterialCommunityIcons name="content-save-outline" size={20} color={colors.inputText} />
+                <Text style={styles.buttonText}> Guardar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={cancelEditing}>
+                <MaterialCommunityIcons name="close-circle-outline" size={20} color={colors.inputText} />
+                <Text style={styles.buttonText}> Cancelar</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity style={[styles.button, styles.deleteAllButton]} onPress={deleteAll}>
+                <MaterialCommunityIcons name="delete-sweep-outline" size={20} color={colors.inputText} />
+                <Text style={styles.buttonText}> Eliminar todo</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.addButton]} onPress={saveProduct}>
+                <MaterialCommunityIcons name="plus" size={20} color={colors.inputText} />
+                <Text style={styles.buttonText}> Agregar</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
+        {menu.length === 0 ? (
+          <Text style={styles.emptyText}>No hay productos en el menú.</Text>
         ) : (
-          <TouchableOpacity style={[styles.button, styles.addButton]} onPress={saveProduct}>
-            <Text style={styles.buttonText}>Agregar</Text>
-          </TouchableOpacity>
+          <FlatList
+            data={menu}
+            renderItem={renderItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingBottom: 80 }}
+            style={{ marginTop: 16 }}
+          />
         )}
-      </View>
-
-      {menu.length === 0 ? (
-        <Text style={styles.emptyText}>No hay productos en el menú.</Text>
-      ) : (
-        <FlatList
-          data={menu}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 80 }}
-          style={{ marginTop: 16 }}
-        />
-      )}
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -219,13 +251,15 @@ const styles = StyleSheet.create({
   },
   buttonsRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 12,
-    justifyContent: 'flex-end',
-    gap: 12,
+    gap: 10,
   },
   button: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 10,
   },
   addButton: {
@@ -237,11 +271,14 @@ const styles = StyleSheet.create({
   cancelButton: {
     backgroundColor: colors.buttonDelete,
   },
+  deleteAllButton: {
+    backgroundColor: colors.buttonDelete,
+  },
   buttonText: {
     color: colors.inputText,
     fontWeight: '700',
     fontSize: 16,
-    textAlign: 'center',
+    marginLeft: 6,
   },
   itemContainer: {
     flexDirection: 'row',

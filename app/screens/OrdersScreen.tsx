@@ -50,7 +50,7 @@ export default function ViewOrdersScreen() {
     'Marcar como listo',
     '¿Deseas marcar este pedido como listo? Ya no aparecerá en esta lista.',
     [
-      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Cancelar', style: 'destructive' },
       {
         text: 'Marcar como listo',
         onPress: async () => {
@@ -77,7 +77,7 @@ export default function ViewOrdersScreen() {
             console.error('Error al mover pedido al historial:', error);
           }
         },
-        style: 'destructive',
+        style: 'cancel',
       },
     ]
   );

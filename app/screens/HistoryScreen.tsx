@@ -6,9 +6,11 @@ import {
   StyleSheet,
   Alert,
   Pressable,
+  TouchableOpacity,
 } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 import { colors } from '../../styles/colors';
 
 type Product = {
@@ -49,7 +51,6 @@ export default function HistorialScreen() {
   }, []);
 
   const eliminarPedido = (id: string) => {
-    console.log('Long press detected en pedido con id:', id);
     Alert.alert(
       'Eliminar pedido',
       '¿Seguro que quieres eliminar este pedido permanentemente?',
@@ -63,7 +64,6 @@ export default function HistorialScreen() {
               const nuevoHistorial = historial.filter((o) => o.id !== id);
               setHistorial(nuevoHistorial);
               await AsyncStorage.setItem('pedidosHistorial', JSON.stringify(nuevoHistorial));
-              console.log('Pedido eliminado:', id);
             } catch (error) {
               console.error('Error al eliminar pedido:', error);
             }
@@ -86,7 +86,6 @@ export default function HistorialScreen() {
             try {
               await AsyncStorage.removeItem('pedidosHistorial');
               setHistorial([]);
-              console.log('Historial completo borrado');
             } catch (error) {
               console.error('Error al borrar historial:', error);
             }
@@ -94,6 +93,34 @@ export default function HistorialScreen() {
         },
       ]
     );
+  };
+
+  const exportarJSON = async () => {
+    try {
+      if (historial.length === 0) {
+        Alert.alert('Sin datos', 'No hay pedidos para exportar.');
+        return;
+      }
+
+      const fileName = `historial_pedidos_${Date.now()}.json`;
+      const fileUri = FileSystem.documentDirectory + fileName;
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(historial, null, 2), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      Alert.alert(
+        'Archivo exportado',
+        `El historial se guardó como:\n${fileName}`,
+        [
+          { text: 'OK' },
+        ]
+      );
+
+      // Opcional: abrir carpeta con FileSystem.getContentUriAsync si lo necesitas
+    } catch (error) {
+      console.error('Error al exportar JSON:', error);
+      Alert.alert('Error', 'No se pudo exportar el historial.');
+    }
   };
 
   const renderOrder = ({ item }: { item: Order }) => (
@@ -152,9 +179,16 @@ export default function HistorialScreen() {
             keyExtractor={(item) => item.id}
             contentContainerStyle={{ paddingBottom: 80 }}
           />
-          <Pressable style={styles.clearAllBtn} onPress={borrarTodo}>
-            <Text style={styles.clearAllText}>Borrar todo el historial</Text>
-          </Pressable>
+
+          <View style={styles.buttonRow}>
+            <TouchableOpacity style={styles.exportBtn} onPress={exportarJSON}>
+              <Text style={styles.exportText}>Exportar JSON</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.clearAllBtn} onPress={borrarTodo}>
+              <Text style={styles.clearAllText}>Borrar historial</Text>
+            </TouchableOpacity>
+          </View>
         </>
       )}
     </View>
@@ -224,13 +258,30 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: 13,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginBottom: 24,
+    gap: 12,
+  },
+  exportBtn: {
+    flex: 1,
+    backgroundColor: '#3498db',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  exportText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
   clearAllBtn: {
+    flex: 1,
     backgroundColor: colors.danger,
     paddingVertical: 12,
     borderRadius: 10,
-    marginHorizontal: 16,
-    marginBottom: 24,
-    justifyContent: 'center',
     alignItems: 'center',
   },
   clearAllText: {
